@@ -7,7 +7,7 @@ Usage:
               [--path <PATH>]
               [--structure <STRUCTURE>]
               [--modified-since <BEHAVIOR>]
-              [--on-match <ACTION>] (refresh [<BOARD> [<THREAD>]] | <URL>)
+              [--on-match <ACTION>] (refresh [<BOARD> [<THREAD>]] | <URL>...)
     sukureipu --clean
 
 Options:
@@ -56,6 +56,7 @@ Plans:
     - MD5 Check
 """
 
+from concurrent.futures import process
 from time import time, sleep
 import requests
 import re
@@ -67,6 +68,7 @@ from schema import Schema, And, Or, SchemaError, Use
 from util.enums import get_on_match_enum, get_mod_enum, ModSince, OnMatch
 import util.globals as g
 import logging
+from pprint import pprint
 
 
 def download_files(file_objects, board):
@@ -197,6 +199,40 @@ def parse_url(url):
         sys.exit(64)
 
 
+def process_data(structure_info, json_data, structure, reverse, on_match, path):
+    op = json_data['posts'][0]
+    if 'sub' in op.keys():
+        structure_info['title'] = op['sub']
+    elif 'com' in op.keys():
+        end = len(op['com']) - 1
+        if end > 15:
+            end = 15
+        structure_info['title'] = op['com'][end]
+    else:
+        structure_info['title'] = structure_info['thread']
+
+    path_str = gen_path(
+        structure_info, structure)
+
+    file_info = extract_file_objects(
+        json_data, reverse, on_match, path_str, path)
+
+    if (len(file_info) == 0):
+        print('Nothing to download')
+        sys.exit()
+    res = download_files(file_info, structure_info['board'])
+
+    print(
+        f'Finished. {res[0]} files successfully downloaded. {res[1]} files failed.')
+
+
+def process_url(url, mod_since):
+    structure_info = parse_url(url)
+
+    json_data = get_json_data_for_thread(structure_info, get_cached_file(
+        structure_info), mod_since)
+
+
 def main():
     args = docopt(__doc__)
     schema = Schema({
@@ -224,38 +260,35 @@ def main():
                 g.SUK_LOGGER.setLevel(logging.INFO)
             case 3:
                 g.SUK_LOGGER.setLevel(logging.DEBUG)
-        mod_since = get_mod_enum(args['--modified-since'])
-        on_match = get_on_match_enum(args['--on-match'])
         # board name, thread number
-        structure_info = parse_url(args['<URL>'])
-
-        json_data = get_json_data_for_thread(structure_info, get_cached_file(
-            structure_info), mod_since)
-
-        op = json_data['posts'][0]
-        if 'sub' in op.keys():
-            structure_info['title'] = op['sub']
-        elif 'com' in op.keys():
-            end = len(op['com']) - 1
-            if end > 15:
-                end = 15
-            structure_info['title'] = op['com'][end]
+        pprint(args)
+        pprint(isinstance(args['<URL>'], str))
+        structure_info = []
+        if args['refresh']:
+            if args['<BOARD>']:
+                if args['<THREAD>']:
+                    structure_info.append({
+                        'board': args['<BOARD>'],
+                        'thread': args['<THREAD>']
+                    })
+                else:
+                    # Get all cached files that match board
+                    # Generate structure_info for all of them
+                    files = [f.stem for f in g.CACHE.iterdir(
+                    ) if f.stem.startswith(args['<BOARD>'])]
+                    pprint(files)
+                    sys.exit()
+                    pass
+            else:
+                # Get all cached files
+                # Generate struct info for all of them
+                pass
         else:
-            structure_info['title'] = structure_info['thread']
-
-        path_str = gen_path(
-            structure_info, args['--structure'])
-
-        file_info = extract_file_objects(
-            json_data, args['--reverse'], on_match, path_str, args['--path'])
-
-        if (len(file_info) == 0):
-            print('Nothing to download')
-            sys.exit()
-        res = download_files(file_info, structure_info['board'])
-
-        print(
-            f'Finished. {res[0]} files successfully downloaded. {res[1]} files failed.')
+            for url in args['<URL>']:
+                structure_info.append(parse_url(url))
+        for structure in structure_info:
+            json_data = get_json_data_for_thread(
+                structure, get_cached_file(structure), args['--modified-since'])
 
 
 if __name__ == '__main__':
