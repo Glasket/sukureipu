@@ -107,8 +107,11 @@ def main():
         for url in args['<URL>']:
             if (t := Thread.from_url(url)) is not None:
                 threads.append(t)
-    for thread in threads:
+    c = len(threads)
+    print(f'Downloading {c} threads')
+    for idx, thread in enumerate(threads):
         thread.download()
+        print(f'[{idx+1}/{c}] Threads Done')
 
 
 if __name__ == '__main__':
