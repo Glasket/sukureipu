@@ -48,8 +48,11 @@ class Thread:
             self._download_files()
         if Thread.clean:
             # Delete the cache file if archived
-            if self._data['posts'][0]['closed'] == 1:
-                self._cached_file.unlink()
+            try:
+                if self._data['posts'][0]['closed'] == 1:
+                    self._cached_file.unlink()
+            except KeyError:
+                pass
 
     def _download_files(self):
         container = Path(self._files[0]['path'].parent)
