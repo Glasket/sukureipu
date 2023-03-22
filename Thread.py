@@ -23,9 +23,9 @@ class Thread:
             end = len(op['com']) - 1
             if end > 15:
                 end = 15
-            self._structure['title'] = op['com'][end]
+            self._structure_info['title'] = op['com'][end]
         else:
-            self._structure['title'] = self._structure['thread']
+            self._structure_info['title'] = self._structure_info['thread']
 
         template = Thread.structure.lower()
         for t in ['board', 'thread', 'title']:
@@ -44,8 +44,8 @@ class Thread:
 
         if (len(self._files) == 0):
             print('Nothing to download')
-            return
-        self._download_files()
+        else:
+            self._download_files()
         if Thread.clean:
             # Delete the cache file if archived
             if self._data['posts'][0]['closed'] == 1:

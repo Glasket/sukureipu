@@ -53,7 +53,6 @@ Plans:
     - Config file
     - File extension filtering
     - Better structure
-    - Add 'refresh' that can take in a cache file rather than a url
     - Extract out constants
     - MD5 Check
 """
