@@ -1,5 +1,4 @@
 from enum import Enum
-from pickle import APPEND
 
 
 class ModSince(Enum):
